@@ -114,6 +114,13 @@ export class userResolver {
       };
     }
 
+    if (req.session.userId === user.id) {
+      return {
+        errors: [{ field: "User", message: "User already logged in" }],
+        user: user,
+      };
+    }
+
     req.session.userId = user.id;
 
     return {
