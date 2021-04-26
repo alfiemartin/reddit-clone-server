@@ -1,4 +1,4 @@
-import { User } from "../entities/User";
+import { Info, User } from "../entities/User";
 import { MyContext } from "../types";
 import {
   Resolver,
@@ -39,6 +39,16 @@ class UserResponse {
 
 @Resolver()
 export class userResolver {
+  @Query(() => Info, { nullable: true })
+  async me(@Ctx() { req }: MyContext) {
+    // if (!req.session.userId) {
+    //   return null;
+    // }
+
+    // const user = await em.findOne(User, { id: req.session.userId });
+    return { id: req.session.userId };
+  }
+
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
@@ -79,7 +89,7 @@ export class userResolver {
   @Mutation(() => UserResponse)
   async login(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const user = await em.findOne(User, { username: options.username });
 
@@ -99,6 +109,8 @@ export class userResolver {
         errors: [{ field: "password", message: "password incorrect" }],
       };
     }
+
+    req.session.userId = user.id;
 
     return {
       user,
