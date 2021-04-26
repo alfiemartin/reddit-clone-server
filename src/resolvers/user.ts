@@ -39,18 +39,41 @@ class UserResponse {
 
 @Resolver()
 export class userResolver {
-  @Mutation(() => User)
+  @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
     @Ctx() { em }: MyContext
-  ) {
+  ): Promise<UserResponse> {
+    const userAlreadyExists = await em.findOne(User, {
+      username: options.username,
+    });
+
+    if (userAlreadyExists) {
+      //use this or try catch the persistAndFlush
+      return {
+        errors: [{ field: "username", message: "username is already taken" }],
+      };
+    }
+
+    if (options.username.length <= 5) {
+      return {
+        errors: [{ field: "username", message: "username must be > 5" }],
+      };
+    }
+
+    if (options.password.length <= 5) {
+      return {
+        errors: [{ field: "password", message: "password must be > 5" }],
+      };
+    }
+
     const hashedPassword = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
       password: hashedPassword,
     });
     await em.persistAndFlush(user);
-    return user;
+    return { user };
   }
 
   @Mutation(() => UserResponse)
@@ -66,7 +89,11 @@ export class userResolver {
       };
     }
 
-    const passwordIsValid = argon2.verify(user.password, options.password);
+    const passwordIsValid = await argon2.verify(
+      user.password,
+      options.password
+    );
+
     if (!passwordIsValid) {
       return {
         errors: [{ field: "password", message: "password incorrect" }],
