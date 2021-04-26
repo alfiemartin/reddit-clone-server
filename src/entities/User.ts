@@ -24,9 +24,3 @@ export class User {
   @Property({ type: "text" }) //mikro orm
   password!: string;
 }
-
-@ObjectType()
-export class Info {
-  @Field(() => Int, { nullable: true })
-  id: number | null;
-}

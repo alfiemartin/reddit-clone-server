@@ -1,4 +1,4 @@
-import { Info, User } from "../entities/User";
+import { User } from "../entities/User";
 import { MyContext } from "../types";
 import {
   Resolver,
@@ -39,14 +39,18 @@ class UserResponse {
 
 @Resolver()
 export class userResolver {
-  @Query(() => Info, { nullable: true })
-  async me(@Ctx() { req }: MyContext) {
-    // if (!req.session.userId) {
-    //   return null;
-    // }
+  @Query(() => User, { nullable: true })
+  async me(@Ctx() { req, em }: MyContext) {
+    if (!req.session.userId) {
+      return null;
+    }
 
-    // const user = await em.findOne(User, { id: req.session.userId });
-    return { id: req.session.userId };
+    const user = await em.findOne(User, { id: req.session.userId });
+    if (user) {
+      return user;
+    }
+
+    return null;
   }
 
   @Mutation(() => UserResponse)
