@@ -56,7 +56,7 @@ export class userResolver {
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const userAlreadyExists = await em.findOne(User, {
       username: options.username,
@@ -87,6 +87,9 @@ export class userResolver {
       password: hashedPassword,
     });
     await em.persistAndFlush(user);
+
+    req.session.userId = user.id;
+
     return { user };
   }
 
