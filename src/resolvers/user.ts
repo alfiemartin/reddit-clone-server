@@ -14,6 +14,16 @@ import argon2 from "argon2";
 import { COOKIE_NAME } from "../constants";
 
 @InputType()
+class UsernameEmailPasswordInput {
+  @Field()
+  username: string;
+  @Field()
+  email: string;
+  @Field()
+  password: string;
+}
+
+@InputType()
 class UsernamePasswordInput {
   @Field()
   username: string;
@@ -40,6 +50,12 @@ class UserResponse {
 
 @Resolver()
 export class userResolver {
+  // @Mutation(() => Boolean)
+  // async forgotPassword(@Arg("email") email: string, @Ctx() { em }: MyContext) {
+  //   const user = await em.findOne(User, {email});
+  //   return true;
+  // }
+
   @Query(() => User, { nullable: true })
   async me(@Ctx() { req, em }: MyContext) {
     if (!req.session.userId) {
@@ -56,17 +72,31 @@ export class userResolver {
 
   @Mutation(() => UserResponse)
   async register(
-    @Arg("options") options: UsernamePasswordInput,
+    @Arg("options") options: UsernameEmailPasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const userAlreadyExists = await em.findOne(User, {
       username: options.username,
     });
 
+    const emailAlreadyExists = await em.findOne(User, { email: options.email });
+
     if (userAlreadyExists) {
       //use this or try catch the persistAndFlush
       return {
         errors: [{ field: "username", message: "username is already taken" }],
+      };
+    }
+
+    if (emailAlreadyExists) {
+      return {
+        errors: [{ field: "email", message: "email already tied to account" }],
+      };
+    }
+
+    if (!options.email.includes("@") || !(options.email.length > 5)) {
+      return {
+        errors: [{ field: "email", message: "Must be an email address" }],
       };
     }
 
@@ -85,6 +115,7 @@ export class userResolver {
     const hashedPassword = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
+      email: options.email,
       password: hashedPassword,
     });
     await em.persistAndFlush(user);

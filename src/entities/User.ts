@@ -23,4 +23,8 @@ export class User {
   // @Field(() => String) //graphql dont allow passwords to show on api
   @Property({ type: "text" }) //mikro orm
   password!: string;
+
+  @Field(() => String)
+  @Property({ type: "text", unique: true })
+  email!: string;
 }
