@@ -11,7 +11,9 @@ import {
   ObjectType,
 } from "type-graphql";
 import argon2 from "argon2";
-import { COOKIE_NAME } from "../constants";
+import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from "../constants";
+import { sendEmail } from "../utils/sendEmail";
+import { v4 } from "uuid";
 
 @InputType()
 class UsernameEmailPasswordInput {
@@ -50,11 +52,38 @@ class UserResponse {
 
 @Resolver()
 export class userResolver {
-  // @Mutation(() => Boolean)
-  // async forgotPassword(@Arg("email") email: string, @Ctx() { em }: MyContext) {
-  //   const user = await em.findOne(User, {email});
-  //   return true;
-  // }
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Arg("email") email: string,
+    @Ctx() { em, redis }: MyContext
+  ) {
+    const user = await em.findOne(User, { email });
+    if (!user) {
+      //email doesnt exist on any account
+      return false;
+    }
+
+    const token = v4();
+
+    await redis.set(
+      `${FORGOT_PASSWORD_PREFIX}${token}`,
+      user.id,
+      "ex",
+      1000 * 60 * 60
+    );
+    console.log(email);
+    try {
+      await sendEmail(
+        email,
+        `<a href="localhost:3000/reset-password/${token}">reset password</a>`
+      );
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+
+    return true;
+  }
 
   @Query(() => User, { nullable: true })
   async me(@Ctx() { req, em }: MyContext) {
